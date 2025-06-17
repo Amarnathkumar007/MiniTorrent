@@ -1,0 +1,10 @@
+1. make clean && make 
+		-this will remove unnecessary file that created during previous compile and compile again.
+2. Run tracker:
+	./tracker tracker_info.txt 3 
+		- Here from file tracker_info.txt tracker 3 will be selected
+3. Run client:
+	./client 127.0.0.1:8082 tracker_info.txt
+		- This will run client 
+		
+4. type help at each terminal to get all commands.

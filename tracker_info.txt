@@ -1,0 +1,7 @@
+# Tracker Configuration File
+# Format: IP:PORT (one per line)
+# Lines starting with # are comments
+
+127.0.0.1:8080
+127.0.0.1:8081
+127.0.0.1:8082 

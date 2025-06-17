@@ -1,170 +1,349 @@
-## **README.md**
-
-```markdown
 # Peer-to-Peer Distributed File Sharing System
 
-## Table of Contents
+A complete P2P file sharing system implementation in C/C++ using system calls, featuring a tracker server for coordination and clients for file sharing with piece-based downloading.
 
-- [Introduction](#introduction)
-- [Features Implemented](#features-implemented)
-- [Assumptions](#assumptions)
-- [Prerequisites](#prerequisites)
-- [Compilation and Execution Instructions](#compilation-and-execution-instructions)
-- [Working Procedure](#working-procedure)
-- [Commands](#commands)
-- [Implementation Details](#implementation-details)
-- [Error Handling](#error-handling)
+## Features
 
-## Introduction
+- **Tracker Server**: Manages clients, groups, and file metadata
+- **P2P Client**: Handles user interactions, group management, and file transfers
+- **Piece-based File Sharing**: Files split into 512KB pieces with SHA1 verification
+- **Multi-threaded Downloads**: Parallel downloading from multiple peers
+- **Rarest-first Algorithm**: Efficient piece selection strategy
+- **Group Management**: Create groups, manage members, handle join requests
+- **User Authentication**: Secure login system with password hashing
+- **File Integrity**: SHA1 verification for both pieces and complete files
+- **Debugging Tools**: Comprehensive logging and status commands
 
-This is a Peer-to-Peer Distributed File Sharing System implemented in C++. Users can share and download files within groups they belong to. The system supports parallel downloading from multiple peers, synchronized trackers, and a custom piece selection algorithm.
+## System Architecture
 
-## Features Implemented
-
-- **User Account Management**: Create accounts, login, and maintain sessions.
-- **Group Management**: Create groups, join/leave groups, accept/reject join requests.
-- **File Sharing**: Upload and download files within groups.
-- **Parallel Downloading**: Download files by fetching chunks from multiple peers.
-- **Custom Piece Selection Algorithm**: Uses round-robin to distribute chunk requests among peers.
-- **File Integrity Verification**: Ensures downloaded files are intact using SHA1 hashes.
-- **Multithreading**: Handles multiple clients and peer connections concurrently.
-- **Error Handling**: Robust error checking for socket operations and file I/O.
-
-## Assumptions
-
-- At least one tracker is always online.
-- Users have read permissions for the files they share.
-- Network connections are reliable.
-- The environment supports C++17 or later.
-
-## Prerequisites
-
-- **Compiler**: GCC with C++17 support.
-- **Libraries**:
-  - OpenSSL (`-lssl -lcrypto`)
-  - POSIX threads (`-lpthread`)
-
-## Compilation and Execution Instructions
-
-### Compile the Tracker
-
-```bash
-g++ tracker.cpp -o tracker -std=c++17 -lpthread
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         Tracker                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  • User Management                                  │    │
+│  │  • Group Management                                 │    │
+│  │  • File Metadata Storage                           │    │
+│  │  • Peer Coordination                               │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+         ┌────────────┼────────────┐
+         │            │            │
+    ┌────▼───┐   ┌────▼───┐   ┌────▼───┐
+    │Client 1│   │Client 2│   │Client 3│
+    │        │◄──┤        │──►│        │
+    │  P2P   │   │  P2P   │   │  P2P   │
+    │ Server │   │ Server │   │ Server │
+    └────────┘   └────────┘   └────────┘
+         │            │            │
+         └────────────┼────────────┘
+                      │
+              Direct P2P File Transfer
 ```
 
-### Compile the Client
+## Building the System
 
+### Prerequisites
+
+Install required dependencies:
 ```bash
-g++ client.cpp -o client -std=c++17 -lpthread -lssl -lcrypto
+make install
 ```
 
-### Run the Tracker
+### Compilation
 
+Build both tracker and client:
 ```bash
-./tracker tracker_info.txt <tracker_no>
+make
 ```
 
-- `tracker_info.txt`: File containing IP and port details of all trackers.
-- `<tracker_no>`: Tracker number (e.g., 1, 2).
-
-### Run the Client
-
+Or build individually:
 ```bash
-./client <IP>:<PORT> tracker_info.txt
+make tracker
+make client
 ```
 
-- `<IP>`: Client's IP address.
-- `<PORT>`: Port number the client will listen on.
-- `tracker_info.txt`: File containing IP and port details of all trackers.
+### Clean Build
 
-## Working Procedure
+```bash
+make clean
+```
 
-1. **Start the Tracker(s)**: Run the tracker program with the appropriate tracker number.
+## Running the System
 
-2. **Start the Client**: Run the client program with the client's IP and port.
+### 1. Start the Tracker
 
-3. **Create a User Account**: Use the `create_user` command to create a new user account.
+```bash
+./tracker tracker_info.txt 1
+```
 
-4. **Login**: Use the `login` command to authenticate.
+- `tracker_info.txt`: Configuration file containing tracker IP:PORT pairs
+- `1`: Tracker number (1-based index into the configuration file)
 
-5. **Group Operations**:
-   - **Create Group**: `create_group <group_id>`
-   - **Join Group**: `join_group <group_id>`
-   - **Leave Group**: `leave_group <group_id>`
-   - **List Groups**: `list_groups`
-   - **List Requests**: `list_requests <group_id>`
-   - **Accept Request**: `accept_request <group_id> <user_id>`
+### 2. Start Clients
 
-6. **File Sharing**:
-   - **Upload File**: `upload_file <file_path> <group_id>`
-   - **List Files**: `list_files <group_id>`
-   - **Download File**: `download_file <group_id> <file_name> <destination_path>`
-   - **Show Downloads**: `show_downloads`
+```bash
+./client 127.0.0.1:8080 tracker_info.txt
+```
 
-7. **Logout**: Use the `logout` command to end the session.
+- `127.0.0.1:8080`: Tracker address to connect to
+- `tracker_info.txt`: Tracker configuration file for fallback connections
 
-## Commands
+## Usage Guide
 
 ### Tracker Commands
 
-- **Run Tracker**: `./tracker tracker_info.txt <tracker_no>`
-- **Close Tracker**: Type `quit` in the tracker console.
+| Command | Description | Example |
+|---------|-------------|---------|
+| `help` | Show available commands | `help` |
+| `quit` | Stop the tracker | `quit` |
+| `list_clients` | List all registered clients | `list_clients` |
+| `list_groups` | List all groups | `list_groups` |
+| `list_files <group_id>` | List files in a group | `list_files group1` |
+| `sync_status` | Show synchronization status | `sync_status` |
+| `verbose` | Toggle verbose mode | `verbose` |
 
 ### Client Commands
 
-- **Run Client**: `./client <IP>:<PORT> tracker_info.txt`
-- **Create User Account**: `create_user <user_id> <passwd>`
-- **Login**: `login <user_id> <passwd>`
-- **Create Group**: `create_group <group_id>`
-- **Join Group**: `join_group <group_id>`
-- **Leave Group**: `leave_group <group_id>`
-- **List Pending Join Requests**: `list_requests <group_id>`
-- **Accept Group Joining Request**: `accept_request <group_id> <user_id>`
-- **List All Groups**: `list_groups`
-- **List All Sharable Files**: `list_files <group_id>`
-- **Upload File**: `upload_file <file_path> <group_id>`
-- **Download File**: `download_file <group_id> <file_name> <destination_path>`
-- **Logout**: `logout`
-- **Show Downloads**: `show_downloads`
-- **Exit Client**: Type `exit` in the client console.
+#### User Management
+| Command | Description | Example |
+|---------|-------------|---------|
+| `create_user <user_id> <passwd>` | Register a new user | `create_user alice mypass123` |
+| `login <user_id> <passwd>` | Login to the system | `login alice mypass123` |
+| `logout` | Logout from the system | `logout` |
 
-## Implementation Details
+#### Group Management
+| Command | Description | Example |
+|---------|-------------|---------|
+| `create_group <group_id>` | Create a new group | `create_group study_group` |
+| `join_group <group_id>` | Request to join a group | `join_group study_group` |
+| `leave_group <group_id>` | Leave a group | `leave_group study_group` |
+| `list_requests <group_id>` | List pending requests (owner only) | `list_requests study_group` |
+| `accept_request <group_id> <user_id>` | Accept a join request (owner only) | `accept_request study_group bob` |
+| `list_groups` | List all groups | `list_groups` |
 
-### Multithreading
+#### File Sharing
+| Command | Description | Example |
+|---------|-------------|---------|
+| `upload_file <file_path> <group_id>` | Share a file with a group | `upload_file document.pdf study_group` |
+| `download_file <group_id> <file_name> <dest_path>` | Download a file | `download_file study_group document.pdf ./downloads/` |
+| `list_files <group_id>` | List files in a group | `list_files study_group` |
+| `stop_share <group_id> <file_name>` | Stop sharing a file | `stop_share study_group document.pdf` |
 
-- Used the `<thread>` library to handle multiple connections concurrently.
-- Each client connection to the tracker and peer connections between clients are handled in separate threads.
+#### Status and Debugging
+| Command | Description | Example |
+|---------|-------------|---------|
+| `show_downloads` | Show download status | `show_downloads` |
+| `list_shared_files` | List files being shared | `list_shared_files` |
+| `list_peers <file_name>` | List peers sharing a file | `list_peers document.pdf` |
+| `download_progress <file_name>` | Show download progress | `download_progress document.pdf` |
+| `verbose` | Toggle verbose mode | `verbose` |
+| `help` | Show available commands | `help` |
 
-### Networking
+## Example Workflow
 
-- Socket programming is used for communication between clients and trackers/peers.
-- Both TCP sockets and multithreading ensure reliable data transfer and concurrent handling.
+### 1. Setup and User Registration
 
-### File Handling
+**Terminal 1 (Tracker):**
+```bash
+./tracker tracker_info.txt 1
+help
+```
 
-- Files are divided into chunks of 512 KB.
-- `lseek()` is used to write chunks to the correct position in the file.
-- The file is initially created with the correct size filled with zeros.
+**Terminal 2 (Client 1):**
+```bash
+./client 127.0.0.1:8080 tracker_info.txt
+create_user alice password123
+login alice password123
+```
 
-### Hashing
+**Terminal 3 (Client 2):**
+```bash
+./client 127.0.0.1:8080 tracker_info.txt
+create_user bob password456
+login bob password456
+```
 
-- SHA1 hashes are computed for file integrity verification.
-- The OpenSSL library is used for hashing functions.
+### 2. Group Creation and Management
 
-### Piece Selection Algorithm
+**Client 1 (Alice):**
+```bash
+create_group study_materials
+list_groups
+```
 
-- Implemented a round-robin algorithm to assign chunks to different peers.
-- This ensures balanced network utilization and efficient downloading.
+**Client 2 (Bob):**
+```bash
+join_group study_materials
+```
+
+**Client 1 (Alice):**
+```bash
+list_requests study_materials
+accept_request study_materials bob
+```
+
+### 3. File Sharing
+
+**Client 1 (Alice):**
+```bash
+upload_file /path/to/textbook.pdf study_materials
+list_files study_materials
+```
+
+**Client 2 (Bob):**
+```bash
+list_files study_materials
+download_file study_materials textbook.pdf ./downloads/textbook.pdf
+show_downloads
+```
+
+### 4. Monitoring (Tracker)
+
+```bash
+list_clients
+list_groups
+list_files study_materials
+```
+
+## File Structure
+
+```
+├── Makefile              # Build configuration
+├── README.md             # This documentation
+├── tracker_info.txt      # Tracker configuration
+├── common.h              # Common headers and structures
+├── tracker.c             # Tracker server implementation
+├── client.c              # Client implementation
+├── networking.c          # Socket and network functions
+├── utils.c               # Utility functions (SHA1, logging, etc.)
+└── file_handler.c        # File operations and P2P transfer
+```
+
+## Technical Details
+
+### Network Protocol
+
+The system uses a custom message-based protocol over TCP:
+
+```c
+typedef struct {
+    message_type_t type;      // Message type (CREATE_USER, LOGIN, etc.)
+    char data[MAX_BUFFER_SIZE]; // Message payload
+    int data_length;          // Length of payload
+} message_t;
+```
+
+### File Piece Management
+
+- **Piece Size**: 512KB chunks
+- **Hash Algorithm**: SHA1 for integrity verification
+- **Piece Selection**: Rarest-first algorithm for efficient distribution
+- **Parallel Downloads**: Multi-threaded downloading from multiple peers
+
+### Data Structures
+
+- **Users**: Authentication, online status, connection info
+- **Groups**: Members, files, permissions
+- **Files**: Metadata, piece information, SHA1 hashes
+- **Downloads**: Progress tracking, peer management
+
+### Threading Model
+
+- **Tracker**: Main thread + client connection threads
+- **Client**: Main thread + peer server thread + download threads
+
+## Logging and Debugging
+
+- **Tracker Log**: `tracker.log`
+- **Client Log**: `client.log`
+- **Verbose Mode**: Real-time operation logging
+- **Debug Commands**: System state inspection
 
 ## Error Handling
 
-- **Socket Operations**: Checked return values of `socket()`, `bind()`, `listen()`, `accept()`, `connect()`, `send()`, and `recv()`.
-- **File I/O**: Verified successful opening, reading, writing, and closing of files.
-- **Input Validation**: Ensured correct number of arguments and valid command formats.
-- **Exception Safety**: Used try-catch blocks where appropriate to handle exceptions.
+- Connection failure recovery
+- File integrity verification
+- Piece download retry mechanism
+- Graceful shutdown handling
 
----
+## Security Considerations
 
-**Note**: Ensure that all peers and trackers are running and properly configured before starting file transfers. The system relies on active participation from clients for sharing and downloading files.
+- Password hashing for user authentication
+- File integrity verification with SHA1
+- Input validation and sanitization
+- Buffer overflow protection
 
+## Limitations and Future Enhancements
+
+### Current Limitations
+- Single tracker (no tracker redundancy)
+- Basic authentication (plaintext passwords)
+- No encryption for file transfers
+- Limited scalability testing
+
+### Potential Enhancements
+- Multiple tracker synchronization
+- Encrypted file transfers (TLS/SSL)
+- Advanced authentication (tokens, certificates)
+- NAT traversal support
+- Web-based management interface
+- Bandwidth throttling
+- File compression
+- Resume interrupted downloads
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Connection Refused**
+   - Check if tracker is running
+   - Verify IP and port in tracker_info.txt
+   - Check firewall settings
+
+2. **File Upload Fails**
+   - Verify file exists and is readable
+   - Check group membership
+   - Ensure sufficient disk space
+
+3. **Download Stalls**
+   - Check peer availability
+   - Verify network connectivity
+   - Monitor verbose logs for errors
+
+4. **Permission Denied**
+   - Ensure user is logged in
+   - Verify group membership
+   - Check file permissions
+
+### Debug Commands
+
+Use the debug commands to inspect system state:
+
+```bash
+# Tracker debugging
+list_clients
+list_groups
+list_files <group_id>
+sync_status
+
+# Client debugging
+list_shared_files
+show_downloads
+download_progress <file_name>
+verbose
 ```
+
+## Contributing
+
+This implementation serves as a foundation for P2P file sharing systems. Contributions are welcome for:
+
+- Performance optimizations
+- Security enhancements
+- Feature additions
+- Bug fixes
+- Documentation improvements
+
+## License
+
+This project is provided as an educational implementation of P2P file sharing concepts. 
